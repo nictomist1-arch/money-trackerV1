@@ -1,0 +1,138 @@
+<!-- app/templates/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-money-bill-wave"></i>
+                <h1>MoneyTracker</h1>
+            </div>
+            <nav class="nav">
+                <a href="/" class="active"><i class="fas fa-home"></i> Главная</a>
+                <a href="/dashboard"><i class="fas fa-chart-bar"></i> Дашборд</a>
+                <a href="/api/docs" target="_blank"><i class="fas fa-book"></i> API Документация</a>
+                <div class="auth-buttons">
+                    <a href="/login" class="btn btn-outline"><i class="fas fa-sign-in-alt"></i> Войти</a>
+                    <a href="/register" class="btn btn-primary"><i class="fas fa-user-plus"></i> Регистрация</a>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Герой-секция -->
+        <section class="hero">
+            <div class="hero-content">
+                <h2>Контролируйте свои финансы с легкостью</h2>
+                <p>MoneyTracker помогает отслеживать доходы и расходы, анализировать траты и достигать финансовых целей.</p>
+                <div class="hero-buttons">
+                    <a href="/register" class="btn btn-primary btn-large">
+                        <i class="fas fa-rocket"></i> Начать бесплатно
+                    </a>
+                    <a href="#features" class="btn btn-outline btn-large">
+                        <i class="fas fa-info-circle"></i> Узнать больше
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Финансовый контроль">
+            </div>
+        </section>
+
+        <!-- Возможности -->
+        <section id="features" class="features">
+            <h2>Возможности MoneyTracker</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h3>Учет транзакций</h3>
+                    <p>Добавляйте доходы и расходы, классифицируйте их по категориям.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Визуализация</h3>
+                    <p>Наглядные графики и диаграммы для анализа ваших финансов.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <h3>Бюджеты</h3>
+                    <p>Устанавливайте лимиты расходов и отслеживайте их выполнение.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Доступ везде</h3>
+                    <p>Работает на любом устройстве через современный веб-интерфейс.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Статистика API -->
+        <section class="api-section">
+            <h2>API для разработчиков</h2>
+            <div class="api-info">
+                <p>Полнофункциональное REST API с документацией OpenAPI/Swagger.</p>
+                <div class="endpoints">
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <code>/api/v1/transactions</code>
+                        <span>Список транзакций</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method post">POST</span>
+                        <code>/api/v1/transactions</code>
+                        <span>Создать транзакцию</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <code>/api/v1/stats/dashboard</code>
+                        <span>Статистика дашборда</span>
+                    </div>
+                </div>
+                <a href="/api/docs" class="btn btn-primary" target="_blank">
+                    <i class="fas fa-external-link-alt"></i> Открыть документацию API
+                </a>
+            </div>
+        </section>
+
+        <!-- Подвал -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>MoneyTracker</h3>
+                    <p>Простой и мощный трекер личных финансов.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Технологии</h3>
+                    <p>FastAPI • PostgreSQL • SQLAlchemy • Pydantic • HTML/CSS/JS</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Ссылки</h3>
+                    <a href="/api/docs">API Документация</a>
+                    <a href="/health">Статус сервиса</a>
+                    <a href="https://render.com" target="_blank">Развернуто на Render</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MoneyTracker API. Все права защищены.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
