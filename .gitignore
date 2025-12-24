@@ -1,0 +1,27 @@
+web: gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT  python-3.11.0  gunicorn==21.2.0  # Python  __pycache__/  *.py[cod]  *$py.class  *.so  .Python  env/  venv/  ENV/  env.bak/  venv.bak/  # Database  *.db  *.sqlite3  # Environment  .env  *.env.local 
+# Файлы окружения и базы данных
+.env
+*.db
+money_tracker.db
+
+# Файлы Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
