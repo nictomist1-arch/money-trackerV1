@@ -1,8 +1,7 @@
-# app/models.py
 from sqlalchemy import (
     Boolean, Column, ForeignKey, Integer, 
     String, Text, DateTime, Float, Numeric, 
-    Enum, CheckConstraint, Index, func
+    Enum, CheckConstraint, Index, func, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -23,7 +22,6 @@ class User(Base):
     # Связи
     transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
     categories = relationship("Category", back_populates="user", cascade="all, delete-orphan")
-    budgets = relationship("Budget", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}')>"
@@ -44,7 +42,6 @@ class Category(Base):
     # Связи
     user = relationship("User", back_populates="categories")
     transactions = relationship("Transaction", back_populates="category", cascade="all, delete-orphan")
-    budgets = relationship("Budget", back_populates="category", cascade="all, delete-orphan")
 
     # Индексы
     __table_args__ = (
@@ -83,32 +80,3 @@ class Transaction(Base):
 
     def __repr__(self):
         return f"<Transaction(id={self.id}, amount={self.amount}, type='{self.type}')>"
-
-
-class Budget(Base):
-    """Модель бюджета на категорию"""
-    __tablename__ = "budgets"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)
-    amount = Column(Numeric(10, 2), nullable=False)
-    period = Column(Enum('daily', 'weekly', 'monthly', 'yearly', name='budget_period'), nullable=False, default='monthly')
-    start_date = Column(DateTime(timezone=True), nullable=False)
-    end_date = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # Связи
-    user = relationship("User", back_populates="budgets")
-    category = relationship("Category", back_populates="budgets")
-
-    # Индексы и ограничения
-    __table_args__ = (
-        CheckConstraint('amount >= 0', name='check_budget_amount'),
-        CheckConstraint('end_date IS NULL OR end_date > start_date', name='check_budget_dates'),
-        UniqueConstraint('user_id', 'category_id', 'period', name='unique_user_category_period'),
-        Index('ix_budgets_user_period', 'user_id', 'period'),
-    )
-
-    def __repr__(self):
-        return f"<Budget(id={self.id}, amount={self.amount}, period='{self.period}')>"
