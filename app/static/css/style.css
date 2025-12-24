@@ -49,3 +49,90 @@
         font-size: 1.8rem;
     }
 }
+/* Стили для статуса БД */
+.db-status {
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.db-success {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    color: #155724;
+}
+
+.db-warning {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    color: #856404;
+}
+
+.db-error {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    color: #721c24;
+}
+
+/* Стили для кнопок */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+    border: 2px solid #007bff;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: 2px solid #6c757d;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+    border-color: #545b62;
+    transform: translateY(-2px);
+}
+
+/* Стили для блоков кода */
+.code-block {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    overflow-x: auto;
+    margin: 16px 0;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .container {
+        padding: 16px;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 8px;
+    }
+}

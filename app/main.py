@@ -1,4 +1,3 @@
-# app/main.py
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -7,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
 import os
+import datetime
 
 from app.database import engine, get_db, check_database_connection
 from app import models
@@ -15,13 +15,15 @@ from app import models
 async def lifespan(app: FastAPI):
     """Управление жизненным циклом приложения"""
     print("🚀 Starting MoneyTracker API...")
+    print(f"📅 Started at: {datetime.datetime.now()}")
     
-    # Создаем таблицы при запуске
     try:
+        # Пытаемся создать таблицы
+        print("🔄 Creating database tables...")
         models.Base.metadata.create_all(bind=engine)
-        print("✅ Database tables created")
+        print("✅ Database tables created successfully")
     except Exception as e:
-        print(f"⚠️ Database initialization error: {e}")
+        print(f"⚠️ Warning: Could not create tables: {str(e)[:100]}")
     
     yield
     
@@ -60,6 +62,20 @@ async def read_root(request: Request):
     # Проверяем подключение к БД
     db_status = check_database_connection()
     
+    # Определяем стиль в зависимости от статуса
+    db_status_class = ""
+    db_icon = ""
+    
+    if "✅" in db_status:
+        db_status_class = "db-success"
+        db_icon = "✅"
+    elif "⚠️" in db_status:
+        db_status_class = "db-warning"
+        db_icon = "⚠️"
+    else:
+        db_status_class = "db-error"
+        db_icon = "❌"
+    
     html_content = f"""
     <!DOCTYPE html>
     <html lang="ru">
@@ -67,6 +83,8 @@ async def read_root(request: Request):
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>MoneyTracker API</title>
+        <link rel="stylesheet" href="/static/css/style.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
             * {{
                 margin: 0;
@@ -83,7 +101,7 @@ async def read_root(request: Request):
             }}
             
             .container {{
-                max-width: 1000px;
+                max-width: 1200px;
                 margin: 0 auto;
             }}
             
@@ -92,7 +110,6 @@ async def read_root(request: Request):
                 border-radius: 20px;
                 padding: 40px;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                margin-bottom: 30px;
             }}
             
             .header {{
@@ -103,6 +120,7 @@ async def read_root(request: Request):
             .logo {{
                 font-size: 48px;
                 margin-bottom: 20px;
+                color: #667eea;
             }}
             
             h1 {{
@@ -117,61 +135,61 @@ async def read_root(request: Request):
                 margin-bottom: 30px;
             }}
             
-            .status-card {{
-                background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
-                padding: 30px;
-                border-radius: 15px;
-                margin-bottom: 30px;
-                text-align: center;
-            }}
-            
-            .status-badge {{
-                display: inline-block;
-                background: #48bb78;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 50px;
-                font-weight: bold;
-                margin-bottom: 20px;
-            }}
-            
-            .info-grid {{
+            .status-grid {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
                 gap: 20px;
                 margin: 30px 0;
             }}
             
-            .info-item {{
-                background: #f7fafc;
-                padding: 20px;
-                border-radius: 10px;
+            .status-card {{
+                background: #f8f9fa;
+                padding: 25px;
+                border-radius: 15px;
                 text-align: center;
+                border: 2px solid #e9ecef;
             }}
             
-            .info-label {{
+            .status-label {{
                 font-size: 0.9rem;
-                color: #718096;
-                margin-bottom: 5px;
+                color: #6c757d;
+                margin-bottom: 10px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
             }}
             
-            .info-value {{
-                font-size: 1.5rem;
+            .status-value {{
+                font-size: 1.8rem;
                 font-weight: bold;
                 color: #2d3748;
             }}
             
             .db-status {{
-                background: #f0fff4;
-                border-left: 4px solid #48bb78;
-                padding: 15px;
-                margin: 20px 0;
-                border-radius: 5px;
+                padding: 20px;
+                margin: 30px 0;
+                border-radius: 10px;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }}
+            
+            .db-success {{
+                background: #d4edda;
+                border: 2px solid #28a745;
+                color: #155724;
+            }}
+            
+            .db-warning {{
+                background: #fff3cd;
+                border: 2px solid #ffc107;
+                color: #856404;
             }}
             
             .db-error {{
-                background: #fff5f5;
-                border-left: 4px solid #f56565;
+                background: #f8d7da;
+                border: 2px solid #dc3545;
+                color: #721c24;
             }}
             
             .buttons {{
@@ -179,38 +197,57 @@ async def read_root(request: Request):
                 gap: 15px;
                 flex-wrap: wrap;
                 justify-content: center;
-                margin-top: 30px;
+                margin: 40px 0;
             }}
             
             .btn {{
-                padding: 15px 30px;
-                border-radius: 10px;
-                text-decoration: none;
-                font-weight: bold;
                 display: inline-flex;
                 align-items: center;
                 gap: 10px;
-                transition: transform 0.2s, box-shadow 0.2s;
-            }}
-            
-            .btn:hover {{
-                transform: translateY(-2px);
-                box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+                padding: 15px 30px;
+                border-radius: 10px;
+                text-decoration: none;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                border: 2px solid transparent;
             }}
             
             .btn-primary {{
-                background: #4299e1;
+                background: #007bff;
                 color: white;
+                border-color: #007bff;
+            }}
+            
+            .btn-primary:hover {{
+                background: #0056b3;
+                border-color: #0056b3;
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
             }}
             
             .btn-secondary {{
-                background: #edf2f7;
-                color: #2d3748;
+                background: #6c757d;
+                color: white;
+                border-color: #6c757d;
+            }}
+            
+            .btn-secondary:hover {{
+                background: #545b62;
+                border-color: #545b62;
+                transform: translateY(-2px);
             }}
             
             .btn-success {{
-                background: #48bb78;
+                background: #28a745;
                 color: white;
+                border-color: #28a745;
+            }}
+            
+            .code-section {{
+                margin: 40px 0;
+                padding: 30px;
+                background: #f8f9fa;
+                border-radius: 15px;
             }}
             
             .code-block {{
@@ -219,42 +256,47 @@ async def read_root(request: Request):
                 padding: 20px;
                 border-radius: 10px;
                 font-family: 'Courier New', monospace;
-                margin: 20px 0;
+                font-size: 14px;
                 overflow-x: auto;
+                margin: 20px 0;
+                line-height: 1.5;
             }}
             
-            .api-endpoints {{
+            .endpoints {{
                 margin-top: 40px;
             }}
             
             .endpoint {{
-                background: #f7fafc;
+                background: #f8f9fa;
                 padding: 15px;
                 margin: 10px 0;
                 border-radius: 8px;
-                border-left: 4px solid #4299e1;
+                border-left: 4px solid #007bff;
             }}
             
             .method {{
                 display: inline-block;
-                padding: 5px 10px;
+                padding: 5px 12px;
                 border-radius: 5px;
                 font-weight: bold;
                 font-size: 0.9rem;
-                margin-right: 10px;
+                margin-right: 15px;
+                min-width: 70px;
+                text-align: center;
             }}
             
-            .get {{ background: #48bb78; color: white; }}
-            .post {{ background: #4299e1; color: white; }}
-            .put {{ background: #ed8936; color: white; }}
-            .delete {{ background: #f56565; color: white; }}
+            .get {{ background: #28a745; color: white; }}
+            .post {{ background: #007bff; color: white; }}
+            .put {{ background: #fd7e14; color: white; }}
+            .delete {{ background: #dc3545; color: white; }}
             
             .footer {{
                 text-align: center;
-                margin-top: 40px;
+                margin-top: 50px;
                 padding-top: 20px;
-                border-top: 1px solid #e2e8f0;
-                color: #718096;
+                border-top: 1px solid #e9ecef;
+                color: #6c757d;
+                font-size: 0.9rem;
             }}
             
             @media (max-width: 768px) {{
@@ -274,6 +316,10 @@ async def read_root(request: Request):
                     width: 100%;
                     justify-content: center;
                 }}
+                
+                .status-grid {{
+                    grid-template-columns: 1fr;
+                }}
             }}
         </style>
     </head>
@@ -282,51 +328,57 @@ async def read_root(request: Request):
             <div class="card">
                 <!-- Заголовок -->
                 <div class="header">
-                    <div class="logo">💰</div>
+                    <div class="logo">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
                     <h1>MoneyTracker API</h1>
                     <p class="subtitle">API для отслеживания личных финансов</p>
                 </div>
                 
-                <!-- Статус -->
-                <div class="status-card">
-                    <div class="status-badge">Статус: Работает ✅</div>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-label">Версия</div>
-                            <div class="info-value">2.0.0</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Режим</div>
-                            <div class="info-value">{'Разработка' if os.getenv('DEBUG') == 'true' else 'Продакшн'}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Платформа</div>
-                            <div class="info-value">Render.com</div>
-                        </div>
+                <!-- Сетка статуса -->
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="status-label">Статус</div>
+                        <div class="status-value" style="color: #28a745;">Работает ✅</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Версия</div>
+                        <div class="status-value">2.0.0</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Режим</div>
+                        <div class="status-value">{'Разработка' if os.getenv('DEBUG') == 'true' else 'Продакшн'}</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Платформа</div>
+                        <div class="status-value">Render.com</div>
                     </div>
                 </div>
                 
                 <!-- Статус БД -->
-                <div class="db-status {'db-error' if 'Ошибка' in db_status else ''}">
-                    <strong>База данных:</strong> {db_status}
+                <div class="db-status {db_status_class}">
+                    <div style="font-size: 24px;">{db_icon}</div>
+                    <div>
+                        <strong>База данных:</strong> {db_status}
+                    </div>
                 </div>
                 
                 <!-- Кнопки действий -->
                 <div class="buttons">
                     <a href="/api/docs" class="btn btn-primary" target="_blank">
-                        📚 API Документация
+                        <i class="fas fa-book"></i> API Документация
                     </a>
                     <a href="/health" class="btn btn-secondary">
-                        🏥 Проверка здоровья
+                        <i class="fas fa-heartbeat"></i> Проверка здоровья
                     </a>
-                    <a href="/api/v1/status" class="btn btn-success">
-                        📊 Статус системы
+                    <a href="/api/v1/db/check" class="btn btn-success">
+                        <i class="fas fa-database"></i> Проверить БД
                     </a>
                 </div>
                 
-                <!-- Пример API -->
-                <div class="api-endpoints">
-                    <h3>📋 Примеры использования API</h3>
+                <!-- Примеры API -->
+                <div class="code-section">
+                    <h3><i class="fas fa-code"></i> Примеры использования API</h3>
                     
                     <div class="code-block">
 // Регистрация пользователя
@@ -348,8 +400,11 @@ POST /api/v1/auth/login
 GET /api/v1/transactions
 Authorization: Bearer YOUR_TOKEN
                     </div>
-                    
-                    <h3>🚀 Доступные эндпоинты</h3>
+                </div>
+                
+                <!-- Доступные эндпоинты -->
+                <div class="endpoints">
+                    <h3><i class="fas fa-list"></i> Доступные эндпоинты</h3>
                     
                     <div class="endpoint">
                         <span class="method get">GET</span>
@@ -374,15 +429,67 @@ Authorization: Bearer YOUR_TOKEN
                         <code>/api/v1/stats/dashboard</code>
                         <span>— Статистика дашборда</span>
                     </div>
+                    
+                    <div class="endpoint">
+                        <span class="method get">GET</span>
+                        <code>/api/v1/db/check</code>
+                        <span>— Проверить подключение к БД</span>
+                    </div>
                 </div>
                 
                 <!-- Футер -->
                 <div class="footer">
                     <p>© 2024 MoneyTracker API • Развернуто на Render.com</p>
                     <p>FastAPI • PostgreSQL • SQLAlchemy • Pydantic</p>
+                    <p style="margin-top: 10px; font-size: 0.8rem; color: #adb5bd;">
+                        <i class="fas fa-info-circle"></i> Время запуска: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                    </p>
                 </div>
             </div>
         </div>
+        
+        <script>
+            // Обновляем время
+            function updateTime() {{
+                const timeElement = document.querySelector('.footer p:last-child');
+                if (timeElement) {{
+                    const now = new Date();
+                    timeElement.innerHTML = `<i class="fas fa-info-circle"></i> Обновлено: ${{now.toLocaleString('ru-RU')}}`;
+                }}
+            }}
+            
+            // Обновляем время каждую минуту
+            setInterval(updateTime, 60000);
+            
+            // Копирование кода при клике
+            document.querySelectorAll('.code-block').forEach(block => {{
+                block.addEventListener('click', function() {{
+                    const text = this.textContent;
+                    navigator.clipboard.writeText(text).then(() => {{
+                        const originalText = this.textContent;
+                        this.textContent = '✅ Код скопирован в буфер обмена!';
+                        setTimeout(() => {{
+                            this.textContent = originalText;
+                        }}, 2000);
+                    }});
+                }});
+            }});
+            
+            // Проверка статуса API
+            async function checkApiStatus() {{
+                try {{
+                    const response = await fetch('/health');
+                    if (response.ok) {{
+                        console.log('✅ API работает нормально');
+                    }}
+                }} catch (error) {{
+                    console.log('⚠️ Не удалось проверить статус API');
+                }}
+            }}
+            
+            // Проверяем при загрузке
+            window.addEventListener('load', checkApiStatus);
+        </script>
     </body>
     </html>
     """
@@ -393,194 +500,74 @@ Authorization: Bearer YOUR_TOKEN
 async def health_check():
     """Проверка здоровья приложения"""
     db_status = check_database_connection()
-    is_healthy = "✅" if "✅" in db_status else "❌"
+    is_healthy = "✅" in db_status
     
     return {
-        "status": "healthy" if "✅" in db_status else "degraded",
+        "status": "healthy" if is_healthy else "degraded",
         "service": "money-tracker-api",
         "version": "2.0.0",
-        "timestamp": "2024-01-15T10:30:00Z",
+        "timestamp": datetime.datetime.now().isoformat(),
         "components": {
             "database": {
-                "status": "connected" if "✅" in db_status else "disconnected",
-                "details": db_status
+                "status": "connected" if is_healthy else "disconnected",
+                "message": db_status
             },
             "api": {
                 "status": "operational",
                 "uptime": "100%"
-            },
-            "authentication": {
-                "status": "operational"
             }
         },
         "links": {
             "documentation": "/api/docs",
-            "metrics": "/api/v1/status"
-        }
-    }
-
-@app.get("/api/v1/status")
-async def get_status(db: Session = Depends(get_db)):
-    """Подробный статус системы"""
-    from sqlalchemy import func
-    
-    # Получаем статистику
-    try:
-        # Количество пользователей
-        users_count = db.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
-        
-        # Количество транзакций
-        transactions_count = db.execute(text("SELECT COUNT(*) FROM transactions")).scalar() or 0
-        
-        # Количество категорий
-        categories_count = db.execute(text("SELECT COUNT(*) FROM categories")).scalar() or 0
-        
-        # Последняя транзакция
-        last_transaction = db.execute(
-            text("SELECT MAX(created_at) FROM transactions")
-        ).scalar()
-        
-    except Exception as e:
-        users_count = transactions_count = categories_count = 0
-        last_transaction = None
-    
-    return {
-        "service": "MoneyTracker API",
-        "version": "2.0.0",
-        "status": "operational",
-        "uptime": "24/7",
-        "environment": "production",
-        "database": check_database_connection(),
-        "statistics": {
-            "users": users_count,
-            "transactions": transactions_count,
-            "categories": categories_count,
-            "last_transaction": str(last_transaction) if last_transaction else "Нет данных"
-        },
-        "endpoints": {
-            "auth": {
-                "register": "POST /api/v1/auth/register",
-                "login": "POST /api/v1/auth/login",
-                "me": "GET /api/v1/auth/me"
-            },
-            "transactions": {
-                "list": "GET /api/v1/transactions",
-                "create": "POST /api/v1/transactions",
-                "stats": "GET /api/v1/transactions/stats/dashboard"
-            },
-            "categories": {
-                "list": "GET /api/v1/categories",
-                "create": "POST /api/v1/categories"
-            }
-        },
-        "documentation": "/api/docs",
-        "health_check": "/health",
-        "support": {
-            "docs": "/api/docs",
-            "issues": "Создать issue в репозитории"
+            "database_check": "/api/v1/db/check",
+            "status_page": "/api/v1/status"
         }
     }
 
 # Импортируем и подключаем роутеры
 try:
-    from app.routers import auth, transactions, categories
+    from app.routers import auth, transactions, categories, db_check
     
     app.include_router(auth.router)
     app.include_router(transactions.router)
     app.include_router(categories.router)
+    app.include_router(db_check.router)
     
-    print("✅ Routers loaded successfully")
+    print("✅ All routers loaded successfully")
+    
 except ImportError as e:
-    print(f"⚠️ Could not import routers: {e}")
+    print(f"⚠️ Could not import some routers: {e}")
     
-    # Создаем базовые роутеры на лету
+    # Создаем базовые роутеры
     from fastapi import APIRouter
     
-    @app.get("/api/v1/auth/test")
-    async def auth_test():
-        return {"message": "Auth endpoint работает"}
-    
-    @app.post("/api/v1/auth/register")
-    async def register_user(user_data: dict):
+    @app.get("/api/v1/db/check")
+    async def check_db():
+        db_status = check_database_connection()
         return {
-            "message": "Пользователь зарегистрирован",
-            "user": user_data.get("username"),
-            "email": user_data.get("email")
-        }
-    
-    @app.post("/api/v1/auth/login")
-    async def login_user(credentials: dict):
-        return {
-            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-            "token_type": "bearer",
-            "user": {
-                "id": 1,
-                "username": credentials.get("email", "").split("@")[0],
-                "email": credentials.get("email")
-            }
-        }
-    
-    @app.get("/api/v1/transactions")
-    async def get_transactions():
-        return {
-            "transactions": [
-                {
-                    "id": 1,
-                    "amount": 1500.00,
-                    "description": "Зарплата",
-                    "type": "income",
-                    "date": "2024-01-15T00:00:00"
-                },
-                {
-                    "id": 2,
-                    "amount": 250.50,
-                    "description": "Продукты",
-                    "type": "expense",
-                    "date": "2024-01-14T00:00:00"
-                }
-            ],
-            "total": 2,
-            "income": 1500.00,
-            "expense": 250.50,
-            "balance": 1249.50
-        }
-    
-    @app.get("/api/v1/transactions/stats/dashboard")
-    async def get_dashboard_stats():
-        return {
-            "total_income": 1500.00,
-            "total_expense": 250.50,
-            "balance": 1249.50,
-            "transactions_count": 2,
-            "most_expensive_category": "Продукты",
-            "period": "last_30_days"
-        }
-    
-    @app.get("/api/v1/categories")
-    async def get_categories():
-        return {
-            "categories": [
-                {"id": 1, "name": "Зарплата", "type": "income", "icon": "💰"},
-                {"id": 2, "name": "Продукты", "type": "expense", "icon": "🛒"},
-                {"id": 3, "name": "Транспорт", "type": "expense", "icon": "🚗"},
-                {"id": 4, "name": "Развлечения", "type": "expense", "icon": "🎬"}
-            ]
+            "database": "PostgreSQL" if "postgresql" in os.getenv("DATABASE_URL", "") else "SQLite",
+            "status": "connected" if "✅" in db_status else "disconnected",
+            "message": db_status
         }
 
-# Добавляем эндпоинт для проверки работы API
+@app.get("/api/v1/status")
+async def get_status():
+    """Статус системы"""
+    return {
+        "service": "MoneyTracker API",
+        "version": "2.0.0",
+        "status": "operational",
+        "environment": "production" if os.getenv("DEBUG") != "true" else "development",
+        "database": check_database_connection(),
+        "endpoints_available": True,
+        "documentation": "/api/docs"
+    }
+
+# Тестовый эндпоинт
 @app.get("/api/test")
 async def test_api():
-    """Тестовый эндпоинт для проверки работы API"""
     return {
-        "message": "MoneyTracker API работает корректно!",
-        "timestamp": "2024-01-15T10:30:00Z",
-        "version": "2.0.0",
-        "endpoints": {
-            "home": "/",
-            "docs": "/api/docs",
-            "health": "/health",
-            "status": "/api/v1/status",
-            "test": "/api/test"
-        },
-        "database": check_database_connection()
+        "message": "API работает корректно!",
+        "database": check_database_connection(),
+        "timestamp": datetime.datetime.now().isoformat()
     }

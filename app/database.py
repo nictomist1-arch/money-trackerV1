@@ -10,75 +10,136 @@ load_dotenv()
 def get_database_url() -> str:
     """
     Получаем URL базы данных.
-    На Render используем DATABASE_URL, локально собираем из компонентов.
+    На Render используем DATABASE_URL, локально используем PostgreSQL или SQLite.
     """
-    # Пробуем получить полный DATABASE_URL из переменных окружения
+    # 1. Проверяем DATABASE_URL от Render
     database_url = os.getenv("DATABASE_URL")
     
     if database_url:
-        # Проверяем и исправляем URL если нужно
+        print(f"🔗 Found DATABASE_URL from environment")
+        
+        # Render обычно дает URL вида:
+        # postgresql://user:password@host:port/database
+        # Проверяем и исправляем если нужно
+        
+        # Если это PostgreSQL URL от Render
+        if database_url.startswith("postgres://"):
+            # Конвертируем старый формат в новый
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+            print(f"🔄 Converted postgres:// to postgresql://")
+        
+        # Проверяем порт
         try:
-            # Парсим URL для проверки
             parsed = urllib.parse.urlparse(database_url)
-            
-            # Если порт пустой, добавляем стандартный
             if not parsed.port:
-                if parsed.scheme == 'postgresql':
-                    new_url = database_url.replace('@', ':5432@')
-                    print(f"Fixed database URL (added port 5432)")
-                    return new_url
-            
-            return database_url
-        except Exception as e:
-            print(f"Error parsing DATABASE_URL: {e}")
+                # Добавляем стандартный порт PostgreSQL
+                if parsed.scheme == "postgresql":
+                    database_url = database_url.replace("://", "://", 1)
+                    if "@" in database_url:
+                        parts = database_url.split("@")
+                        database_url = parts[0] + ":5432@" + parts[1]
+                        print(f"➕ Added default port 5432")
+        except:
+            pass
+        
+        return database_url
     
-    # Если нет DATABASE_URL, собираем из компонентов (для локальной разработки)
-    user = os.getenv("POSTGRES_USER", "postgres")
-    password = os.getenv("POSTGRES_PASSWORD", "postgres")
-    host = os.getenv("POSTGRES_HOST", "localhost")
+    # 2. Проверяем, на Render ли мы (через переменную RENDER)
+    is_render = os.getenv("RENDER", "").lower() == "true"
     
-    # Обрабатываем порт
-    port_str = os.getenv("POSTGRES_PORT", "5432")
+    if is_render:
+        print("⚠️ Running on Render but DATABASE_URL not found!")
+        
+        # Пробуем собрать URL из отдельных переменных
+        user = os.getenv("PGUSER", "postgres")
+        password = os.getenv("PGPASSWORD", "")
+        host = os.getenv("PGHOST", "")
+        port = os.getenv("PGPORT", "5432")
+        database = os.getenv("PGDATABASE", "money_tracker")
+        
+        if all([user, password, host, database]):
+            url = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+            print(f"🔗 Built database URL from PG* variables")
+            return url
+    
+    # 3. Для локальной разработки - пробуем PostgreSQL
+    print("🏠 Local development mode")
+    
+    # Пробуем подключиться к локальному PostgreSQL
+    local_pg_url = "postgresql://postgres:postgres@localhost:5432/money_tracker"
+    
+    # Проверяем, доступен ли локальный PostgreSQL
     try:
-        port = int(port_str) if port_str and port_str.lower() != 'none' else 5432
-    except ValueError:
-        port = 5432
-    
-    db = os.getenv("POSTGRES_DB", "money_tracker")
-    
-    # Формируем URL
-    return f"postgresql://{user}:{password}@{host}:{port}/{db}"
+        test_engine = create_engine(local_pg_url)
+        with test_engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        print("✅ Local PostgreSQL is available")
+        return local_pg_url
+    except:
+        print("⚠️ Local PostgreSQL not available, using SQLite")
+        # Fallback на SQLite
+        return "sqlite:///./money_tracker.db"
 
 # Получаем URL базы данных
 DATABASE_URL = get_database_url()
 
-# Логируем URL (без пароля для безопасности)
-safe_url = DATABASE_URL.split('@')[0] + '@' + '***'
-print(f"Database URL: {safe_url}")
+# Логируем (без пароля)
+def get_safe_url(url):
+    """Возвращает безопасную версию URL без пароля"""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.password:
+            # Заменяем пароль звездочками
+            safe_netloc = parsed.hostname
+            if parsed.port:
+                safe_netloc += f":{parsed.port}"
+            safe_url = urllib.parse.urlunparse(
+                (parsed.scheme, safe_netloc, parsed.path, 
+                 parsed.params, parsed.query, parsed.fragment)
+            )
+            return safe_url.replace("://", "://***:***@")
+    except:
+        pass
+    return url
 
-# Создаем engine с настройками для корректной работы с UTF-8
+safe_url = get_safe_url(DATABASE_URL)
+print(f"📊 Using database: {safe_url}")
+
+# Определяем, используем ли мы SQLite
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
+print(f"🗄️ Database type: {'SQLite' if IS_SQLITE else 'PostgreSQL'}")
+
 try:
-    engine = create_engine(
-        DATABASE_URL,
-        poolclass=QueuePool,
-        pool_size=5,
-        max_overflow=10,
-        pool_recycle=3600,
-        pool_pre_ping=True,
-        echo=False,
-        # Настройки для корректной работы с кодировкой
-        connect_args={
-            'client_encoding': 'utf8'
-        } if DATABASE_URL.startswith('postgresql') else {}
-    )
+    if IS_SQLITE:
+        # Настройки для SQLite
+        engine = create_engine(
+            DATABASE_URL,
+            connect_args={"check_same_thread": False},
+            echo=False
+        )
+    else:
+        # Настройки для PostgreSQL
+        engine = create_engine(
+            DATABASE_URL,
+            poolclass=QueuePool,
+            pool_size=5,
+            max_overflow=10,
+            pool_recycle=3600,
+            pool_pre_ping=True,
+            echo=False,
+            connect_args={
+                'connect_timeout': 10,
+                'application_name': 'money_tracker_api'
+            }
+        )
     
     print("✅ Database engine created successfully")
     
 except Exception as e:
     print(f"❌ Error creating database engine: {e}")
     
-    # Fallback: используем SQLite для тестирования
-    print("⚠️ Using SQLite as fallback database")
+    # Финальный fallback на SQLite
+    print("🔄 Using SQLite as final fallback")
     DATABASE_URL = "sqlite:///./money_tracker.db"
     engine = create_engine(
         DATABASE_URL,
@@ -96,34 +157,30 @@ def get_db():
     finally:
         db.close()
 
-def check_database_connection() -> str:
+def check_database_connection() -> tuple:
     """Проверка подключения к базе данных"""
     try:
         db = SessionLocal()
-        # Используем text() для текстового SQL выражения
         result = db.execute(text("SELECT 1"))
+        
+        # Пытаемся определить тип БД
+        try:
+            db.execute(text("SELECT version()"))
+            db_type = "PostgreSQL"
+        except:
+            db_type = "SQLite"
+        
         db.close()
         
-        # Проверяем результат
-        if result.scalar() == 1:
-            return "✅ Подключена"
-        else:
-            return "⚠️ Подключена, но непредвиденный результат"
-            
+        return "✅ Подключена", db_type, True
+        
     except Exception as e:
         error_msg = str(e)
         
-        # Упрощаем сообщение об ошибке
-        if "password authentication failed" in error_msg.lower():
-            return "❌ Ошибка аутентификации: неверный пароль"
-        elif "connection" in error_msg.lower():
-            return "❌ Ошибка подключения к серверу БД"
-        elif "does not exist" in error_msg.lower():
-            return "❌ База данных не существует"
-        elif "utf-8" in error_msg.lower():
-            return "⚠️ Проблемы с кодировкой (используется fallback SQLite)"
+        # Определяем тип ошибки
+        if "OperationalError" in error_msg or "connection" in error_msg.lower():
+            return "❌ Ошибка подключения", "Неизвестно", False
+        elif IS_SQLITE:
+            return "✅ Используется SQLite (fallback)", "SQLite", True
         else:
-            # Обрезаем длинные сообщения
-            if len(error_msg) > 50:
-                error_msg = error_msg[:50] + "..."
-            return f"❌ Ошибка: {error_msg}"
+            return f"❌ Ошибка: {error_msg[:50]}...", "Ошибка", False
