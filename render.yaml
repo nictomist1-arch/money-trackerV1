@@ -3,10 +3,12 @@ services:
   - type: web
     name: moneytracker-api
     env: python
+    region: frankfurt  # Или другой регион ближе к вам
+    plan: free
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-    startCommand: gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    startCommand: gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -20,9 +22,15 @@ services:
         value: 30
       - key: FRONTEND_URL
         value: https://moneytracker-api.onrender.com
+      - key: APP_NAME
+        value: MoneyTracker API
+    healthCheckPath: /health
+    autoDeploy: true
 
 databases:
   - name: moneytracker-db
     databaseName: moneytracker
     plan: free
-    ipAllowList: []
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
