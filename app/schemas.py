@@ -1,33 +1,36 @@
-# app/schemas.py
-from pydantic import BaseModel, EmailStr, Field, validator, ConfigDict
-from typing import Optional, List
-from datetime import datetime, date
+from pydantic import BaseModel, Field, EmailStr, validator
+from typing import Optional, List, Generic, TypeVar
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
-# Enums
-class CategoryType(str, Enum):
-    INCOME = "income"
-    EXPENSE = "expense"
-
+# ========== ENUMS ==========
 class TransactionType(str, Enum):
     INCOME = "income"
     EXPENSE = "expense"
 
-class BudgetPeriod(str, Enum):
-    DAILY = "daily"
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
-    YEARLY = "yearly"
+class CategoryType(str, Enum):
+    INCOME = "income"
+    EXPENSE = "expense"
 
-# Base schemas
+# ========== BASE SCHEMAS ==========
 class BaseResponse(BaseModel):
     id: int
     created_at: datetime
     
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
-# User schemas
+T = TypeVar('T')
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: List[T]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+# ========== USER SCHEMAS ==========
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
@@ -42,7 +45,7 @@ class UserLogin(BaseModel):
 class UserResponse(BaseResponse, UserBase):
     is_active: bool
 
-# Category schemas
+# ========== CATEGORY SCHEMAS ==========
 class CategoryBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     type: CategoryType
@@ -52,80 +55,40 @@ class CategoryBase(BaseModel):
 class CategoryCreate(CategoryBase):
     pass
 
-class CategoryUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    type: Optional[CategoryType] = None
-    icon: Optional[str] = None
-    color: Optional[str] = None
-
 class CategoryResponse(BaseResponse, CategoryBase):
     user_id: int
 
-# Transaction schemas
+# ========== TRANSACTION SCHEMAS ==========
 class TransactionBase(BaseModel):
     amount: Decimal = Field(..., gt=0)
     date: datetime
     description: Optional[str] = None
     type: TransactionType
+    category_id: Optional[int] = None
 
 class TransactionCreate(TransactionBase):
-    category_id: Optional[int] = None
+    pass
 
 class TransactionUpdate(BaseModel):
     amount: Optional[Decimal] = Field(None, gt=0)
     date: Optional[datetime] = None
     description: Optional[str] = None
+    type: Optional[TransactionType] = None
     category_id: Optional[int] = None
 
 class TransactionResponse(BaseResponse, TransactionBase):
     user_id: int
-    category_id: Optional[int]
-    category: Optional[CategoryResponse]
-    updated_at: Optional[datetime]
+    category_name: Optional[str] = None
+    category_icon: Optional[str] = None
+    updated_at: Optional[datetime] = None
 
-# Budget schemas
-class BudgetBase(BaseModel):
-    amount: Decimal = Field(..., ge=0)
-    period: BudgetPeriod
-    start_date: datetime
-    end_date: Optional[datetime] = None
+class PaginatedTransactions(PaginatedResponse[TransactionResponse]):
+    summary: dict = {}
 
-class BudgetCreate(BudgetBase):
-    category_id: int
-
-class BudgetUpdate(BaseModel):
-    amount: Optional[Decimal] = Field(None, ge=0)
-    period: Optional[BudgetPeriod] = None
-    end_date: Optional[datetime] = None
-
-class BudgetResponse(BaseResponse, BudgetBase):
-    user_id: int
-    category_id: int
-    category: CategoryResponse
-    spent_amount: Optional[Decimal] = 0
-    remaining_amount: Optional[Decimal] = 0
-
-# Token schemas
+# ========== AUTH SCHEMAS ==========
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 class TokenData(BaseModel):
     user_id: Optional[int] = None
-
-# Statistics
-class DashboardStats(BaseModel):
-    total_income: Decimal
-    total_expense: Decimal
-    balance: Decimal
-    most_expensive_category: Optional[str] = None
-    transactions_count: int
-    categories_count: int
-
-# Pagination
-class PaginatedResponse(BaseModel):
-    items: List
-    total: int
-    page: int
-    size: int
-    pages: int

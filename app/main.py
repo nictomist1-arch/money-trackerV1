@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, Depends
+from app.routers import transactions
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -562,6 +563,7 @@ async def get_status():
         "endpoints_available": True,
         "documentation": "/api/docs"
     }
+app.include_router(transactions.router)
 
 # Тестовый эндпоинт
 @app.get("/api/test")
